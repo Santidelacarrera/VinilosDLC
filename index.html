@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vinilos de la Carrera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="grain-overlay" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-disc" aria-hidden="true">
+        <div class="brand-disc-grooves"></div>
+        <div class="brand-disc-label">
+          <span>33⅓</span>
+        </div>
+      </div>
+      <div class="brand-text">
+        <h1>VINILOS DE LA CARRERA</h1>
+        <p class="brand-sub">Colección personal &middot; Discoteca en acetato</p>
+      </div>
+    </div>
+
+    <nav class="view-switch" role="tablist" aria-label="Modo de visualización">
+      <button class="switch-btn active" id="btn-view-catalog" role="tab" aria-selected="true" data-view="catalog">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 14a4 4 0 1 1 4-4 4 4 0 0 1-4 4Zm0-6a2 2 0 1 0 2 2 2 2 0 0 0-2-2Z"/></svg>
+        Escuchar
+      </button>
+      <button class="switch-btn" id="btn-view-admin" role="tab" aria-selected="false" data-view="admin">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Zm7.43-2.5a7.44 7.44 0 0 0 0-2l2.06-1.6a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.43 1a7.34 7.34 0 0 0-1.73-1L14.5 2.2a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.37 2.58a7.34 7.34 0 0 0-1.73 1l-2.43-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.57 11a7.44 7.44 0 0 0 0 2l-2.06 1.6a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.43-1a7.34 7.34 0 0 0 1.73 1l.37 2.58a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.37-2.58a7.34 7.34 0 0 0 1.73-1l2.43 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64Z"/></svg>
+        Gestionar
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ============ VISTA 1: CATALOGO / ESPECTADOR ============ -->
+  <section id="view-catalog" class="view active">
+
+    <div class="catalog-toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5L20.49 19Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
+        <input type="search" id="search-input" placeholder="Buscar por título, artista o año…" autocomplete="off">
+      </div>
+      <div class="count-pill"><span id="catalog-count">0</span> discos en la colección</div>
+      <button type="button" id="refresh-btn" class="btn btn-ghost btn-refresh" title="Buscar discos nuevos">
+        <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M17.65 6.35A8 8 0 1 0 19.73 13h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4Z"/></svg>
+      </button>
+    </div>
+
+    <p id="sync-status" class="sync-status hidden"></p>
+
+    <div id="catalog-grid" class="catalog-grid" aria-live="polite"></div>
+
+    <p id="empty-catalog" class="empty-state hidden">No se encontraron discos que coincidan con tu búsqueda.</p>
+  </section>
+
+  <!-- ============ VISTA 2: GESTION / ADMIN CRUD ============ -->
+  <section id="view-admin" class="view">
+
+    <div class="admin-layout">
+
+      <div class="admin-form-card">
+        <h2 id="form-title">Agregar nuevo disco</h2>
+        <p class="form-hint">Completa la ficha del vinilo. Se guarda en la nube: aparece igual en cualquier dispositivo que abra este link.</p>
+
+        <form id="album-form" novalidate>
+          <input type="hidden" id="f-id">
+
+          <div class="field-row">
+            <div class="field">
+              <label for="f-title">Título del álbum *</label>
+              <input type="text" id="f-title" required placeholder="Ej: Abbey Road">
+            </div>
+            <div class="field">
+              <label for="f-artist">Artista *</label>
+              <input type="text" id="f-artist" required placeholder="Ej: The Beatles">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field field-sm">
+              <label for="f-year">Año</label>
+              <input type="number" id="f-year" min="1900" max="2100" placeholder="1969">
+            </div>
+            <div class="field field-sm">
+              <label for="f-discos">N° de discos (LPs)</label>
+              <input type="number" id="f-discos" min="1" max="10" value="1">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Portada del disco</label>
+            <div class="cover-upload">
+              <div class="cover-preview" id="cover-preview">
+                <span id="cover-preview-empty">Sin imagen</span>
+                <img id="cover-preview-img" class="hidden" alt="Vista previa de la portada">
+              </div>
+              <div class="cover-upload-actions">
+                <label class="btn btn-ghost btn-file" for="f-cover-file">
+                  <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M5 20h14v-2H5Zm7-16-5.5 5.5 1.41 1.41L11 7.83V16h2V7.83l3.09 3.08 1.41-1.41Z"/></svg>
+                  Subir imagen…
+                </label>
+                <input type="file" id="f-cover-file" accept="image/*" hidden>
+                <button type="button" class="btn btn-ghost" id="clear-cover-btn">Quitar</button>
+              </div>
+              <button type="button" class="btn btn-ai" id="ai-identify-btn">
+                <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="m12 2 1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2Zm7 11 .9 2.6L22 16.5l-2.1.9L19 20l-.9-2.6-2.1-.9 2.1-.9L19 13ZM5 13l.9 2.6L8 16.5l-2.1.9L5 20l-.9-2.6L2 16.5l2.1-.9L5 13Z"/></svg>
+                <span id="ai-identify-label">Identificar con IA</span>
+              </button>
+              <p class="label-note">Subí una foto de la portada y la IA completa título, artista y las canciones. Revisalo antes de guardar.</p>
+              <p class="label-note cover-note">También podés pegar una URL de imagen en su lugar:</p>
+              <input type="url" id="f-cover" placeholder="https://…jpg">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Canción de muestra <span class="label-note">(30 a 60 segundos, opcional)</span></label>
+            <div class="cover-upload audio-upload">
+              <div class="audio-preview" id="audio-preview">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M8 5v14l11-7Z"/></svg>
+                <span id="audio-preview-label">Sin audio cargado</span>
+              </div>
+              <audio id="f-audio-preview-player" class="hidden" controls></audio>
+              <div class="cover-upload-actions">
+                <label class="btn btn-ghost btn-file" for="f-audio-file">
+                  <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M5 20h14v-2H5Zm7-16-5.5 5.5 1.41 1.41L11 7.83V16h2V7.83l3.09 3.08 1.41-1.41Z"/></svg>
+                  Subir audio…
+                </label>
+                <input type="file" id="f-audio-file" accept="audio/*" hidden>
+                <button type="button" class="btn btn-ghost" id="clear-audio-btn">Quitar</button>
+              </div>
+              <p class="label-note">Grabá o recortá un fragmento corto de una canción (mp3, m4a, wav) y subilo acá. Si no subís nada, la app va a buscar y reproducir automáticamente la canción más popular del disco.</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="f-desc">Descripción</label>
+            <textarea id="f-desc" rows="3" placeholder="Breve reseña del álbum…"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="f-tracks">Lista de canciones <span class="label-note">(una por línea)</span></label>
+            <textarea id="f-tracks" rows="6" placeholder="Come Together&#10;Something&#10;Oh! Darling"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submit-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6Z"/></svg>
+              Guardar disco
+            </button>
+            <button type="button" class="btn btn-ghost" id="cancel-edit-btn" hidden>Cancelar edición</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-list-card">
+        <div class="admin-list-header">
+          <h2>Discoteca completa</h2>
+          <div class="admin-list-actions">
+            <span id="admin-count" class="count-pill small">0 discos</span>
+            <button type="button" id="ai-bulk-btn" class="btn btn-ai btn-ai-sm">Re-analizar todos con IA</button>
+            <button type="button" id="logout-btn" class="btn btn-ghost btn-logout">Cerrar sesión</button>
+          </div>
+        </div>
+        <p id="ai-bulk-progress" class="sync-status hidden"></p>
+        <div id="admin-table-wrap" class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Título</th>
+                <th>Artista</th>
+                <th>Año</th>
+                <th>LPs</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="admin-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ MODAL DE DETALLE (TRACKLIST) ============ -->
+<div id="modal-overlay" class="modal-overlay" aria-hidden="true">
+  <div class="modal-sleeve" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="modal-close" id="modal-close-btn" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.3 19.7l-1.41-1.41L9.17 12 2.89 5.71 4.3 4.29l6.29 6.3 6.3-6.3Z"/></svg>
+    </button>
+    <div class="modal-inner">
+      <div class="modal-art">
+        <div class="modal-vinyl">
+          <div class="modal-vinyl-grooves"></div>
+          <div class="modal-vinyl-hole"></div>
+        </div>
+        <img id="modal-cover" class="modal-cover-img" src="" alt="">
+        <button type="button" class="download-btn modal-download-btn" id="modal-download-btn" title="Descargar portada" aria-label="Descargar portada">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5 20h14v-2H5Zm7-16-5.5 5.5 1.41 1.41L11 7.83V16h2V7.83l3.09 3.08 1.41-1.41Z" transform="rotate(180 12 11)"/></svg>
+        </button>
+      </div>
+      <div class="modal-details">
+        <p class="modal-eyebrow" id="modal-meta">ARTISTA &middot; AÑO</p>
+        <h2 id="modal-title">Título del álbum</h2>
+        <p class="modal-desc" id="modal-desc"></p>
+
+        <button type="button" class="preview-play-btn hidden" id="modal-audio-btn">
+          <span class="preview-play-icon" id="modal-audio-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M8 5v14l11-7Z"/></svg>
+          </span>
+          <span id="modal-audio-label">Escuchar grabación propia</span>
+        </button>
+
+        <div class="modal-tracklist-head">
+          <span>Lista de canciones</span>
+          <span id="modal-track-count">0 pistas</span>
+        </div>
+        <ol id="modal-tracklist" class="modal-tracklist"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- ============ MODAL DE LOGIN (acceso a Gestionar) ============ -->
+<div id="login-overlay" class="modal-overlay login-overlay" aria-hidden="true">
+  <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <button class="modal-close" id="login-close-btn" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.3 19.7l-1.41-1.41L9.17 12 2.89 5.71 4.3 4.29l6.29 6.3 6.3-6.3Z"/></svg>
+    </button>
+    <div class="login-icon">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Zm7.43-2.5a7.44 7.44 0 0 0 0-2l2.06-1.6a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.43 1a7.34 7.34 0 0 0-1.73-1L14.5 2.2a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.37 2.58a7.34 7.34 0 0 0-1.73 1l-2.43-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.57 11a7.44 7.44 0 0 0 0 2l-2.06 1.6a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.43-1a7.34 7.34 0 0 0 1.73 1l.37 2.58a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.37-2.58a7.34 7.34 0 0 0 1.73-1l2.43 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64Z"/></svg>
+    </div>
+    <h2 id="login-title">Acceso a Gestionar</h2>
+    <p class="login-hint">Ingresá la contraseña para agregar, editar o borrar discos.</p>
+    <form id="login-form" novalidate>
+      <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
+      <p id="login-error" class="login-error hidden">Contraseña incorrecta.</p>
+      <button type="submit" class="btn btn-primary login-submit">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
