@@ -311,6 +311,33 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   background: rgba(12,10,9,.9);
 }
 
+.vinyl-play-btn{
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  width: 62px; height: 62px; border-radius: 50%;
+  background: rgba(12,10,9,.72);
+  border: 2px solid var(--gold);
+  color: var(--gold-bright);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 10px 26px -8px rgba(0,0,0,.6);
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.vinyl-play-btn:hover{
+  transform: translate(-50%, -50%) scale(1.06);
+  background: rgba(12,10,9,.88);
+}
+.vinyl-play-btn.playing{
+  background: var(--gold);
+  color: #201808;
+  box-shadow: 0 0 0 8px rgba(211,169,76,.16), 0 10px 26px -8px rgba(0,0,0,.6);
+}
+.vinyl-play-btn.loading svg{ animation: spin .9s linear infinite; }
+.vinyl-play-btn.loading{ background: rgba(12,10,9,.72); }
+
 .card-body{ position: relative; z-index: 1; padding: 14px 14px 0; }
 .card-artist{
   margin: 0; font-family: var(--font-mono); font-size: 10.5px;

@@ -57,6 +57,11 @@
   let loadingKey = null;
   let previewTimer = null;
 
+  // Reproducción "de corrido" (todo el álbum en orden, avanzando solo)
+  let sequentialSession = 0; // 0 = apagado; otro valor = token de la tanda activa
+  let sequentialAlbum = null;
+  let sequentialIndex = -1;
+
   // caché en memoria de búsquedas a iTunes (artista+tema -> url de preview o null)
   const itunesPreviewCache = {};
 
@@ -119,6 +124,7 @@
     modalTrackCount: document.getElementById("modal-track-count"),
     modalTracklist: document.getElementById("modal-tracklist"),
     modalDownloadBtn: document.getElementById("modal-download-btn"),
+    modalVinylPlayBtn: document.getElementById("modal-vinyl-play-btn"),
     modalAudioBtn: document.getElementById("modal-audio-btn"),
     modalAudioIcon: document.getElementById("modal-audio-icon"),
     modalAudioLabel: document.getElementById("modal-audio-label"),
@@ -463,6 +469,7 @@
   // source puede ser una URL directa (string) o una función async que
   // resuelve la URL (búsqueda en iTunes).
   function requestPlayback(key, source) {
+    sequentialSession = 0; // un click individual cancela el modo "de corrido"
     if (currentKey === key) {
       stopPreview();
       return;
@@ -486,7 +493,7 @@
   }
 
   async function startPlayback(key, source, primedAudio) {
-    stopPreview();
+    stopPreviewKeepSequential();
     const audio = primedAudio || new Audio();
 
     if (typeof source === "string") {
@@ -505,6 +512,10 @@
       }
       loadingKey = null;
       if (!url) {
+        if (sequentialSession) {
+          advanceSequential(); // en modo "de corrido": saltamos a la siguiente sola
+          return;
+        }
         showToast("No se encontró esa canción para escuchar.");
         syncPlayUI();
         return;
@@ -512,6 +523,10 @@
       playUrl(audio, url, key);
     } catch (err) {
       loadingKey = null;
+      if (sequentialSession) {
+        advanceSequential();
+        return;
+      }
       showToast("No se pudo buscar la canción (revisá tu conexión).");
       syncPlayUI();
     }
@@ -525,17 +540,104 @@
 
     audio.play().catch((err) => {
       console.error("No se pudo reproducir:", err);
+      if (sequentialSession) {
+        advanceSequential();
+        return;
+      }
       showToast("No se pudo reproducir. Probá tocar de nuevo.");
       stopPreview();
     });
 
     previewTimer = setTimeout(() => {
-      if (currentKey === key) stopPreview();
+      if (currentKey === key) {
+        if (sequentialSession) advanceSequential();
+        else stopPreview();
+      }
     }, PREVIEW_MAX_MS);
 
     audio.addEventListener("ended", () => {
-      if (currentKey === key) stopPreview();
+      if (currentKey === key) {
+        if (sequentialSession) advanceSequential();
+        else stopPreview();
+      }
     });
+  }
+
+  /* -------------------------------------------------------
+     6e. REPRODUCIR EL ÁLBUM "DE CORRIDO" (botón central del vinilo)
+     Reproduce cada canción de la lista en orden, avanzando sola a la
+     siguiente cuando termina, se corta a 1 minuto, o no se encuentra.
+     ------------------------------------------------------- */
+  function isSequentialPlaying(album) {
+    return Boolean(sequentialSession) && sequentialAlbum && album && sequentialAlbum.id === album.id;
+  }
+
+  function toggleSequentialPlay(album) {
+    if (isSequentialPlaying(album)) {
+      stopPreview();
+      return;
+    }
+    if (!Array.isArray(album.tracklist) || !album.tracklist.length) {
+      showToast("Este disco no tiene canciones cargadas.");
+      return;
+    }
+    stopPreview(); // corta cualquier otra cosa que estuviera sonando
+    sequentialSession = Date.now();
+    sequentialAlbum = album;
+    sequentialIndex = -1;
+    advanceSequential();
+  }
+
+  async function advanceSequential() {
+    const session = sequentialSession;
+    if (!session || !sequentialAlbum) return;
+
+    sequentialIndex++;
+    const tracks = Array.isArray(sequentialAlbum.tracklist) ? sequentialAlbum.tracklist : [];
+
+    if (sequentialIndex >= tracks.length) {
+      showToast("Terminó el álbum.");
+      stopPreview();
+      return;
+    }
+
+    const album = sequentialAlbum;
+    const track = tracks[sequentialIndex];
+    const key = `${album.id}#${sequentialIndex}`;
+
+    loadingKey = key;
+    currentKey = null;
+    syncPlayUI();
+
+    try {
+      const url = await findSongPreview(album.artist, track);
+      if (sequentialSession !== session) return; // se canceló mientras buscaba
+      loadingKey = null;
+      if (!url) {
+        advanceSequential(); // esta no se encontró: probamos la siguiente
+        return;
+      }
+      playUrl(new Audio(), url, key);
+    } catch (err) {
+      if (sequentialSession !== session) return;
+      loadingKey = null;
+      advanceSequential();
+    }
+  }
+
+  // Como stopPreview() normal corta también el modo secuencial (lo cual
+  // queremos cuando el usuario para todo a mano), pero durante los pasos
+  // internos de armado de la siguiente pista no hay que tocar esa bandera.
+  function stopPreviewKeepSequential() {
+    if (previewTimer) {
+      clearTimeout(previewTimer);
+      previewTimer = null;
+    }
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    currentKey = null;
   }
 
   // La API de búsqueda de iTunes no siempre manda los encabezados CORS
@@ -597,15 +699,10 @@
   }
 
   function stopPreview() {
-    if (previewTimer) {
-      clearTimeout(previewTimer);
-      previewTimer = null;
-    }
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-    currentKey = null;
+    sequentialSession = 0;
+    sequentialAlbum = null;
+    sequentialIndex = -1;
+    stopPreviewKeepSequential();
     loadingKey = null;
     syncPlayUI();
   }
@@ -628,6 +725,21 @@
       els.modalAudioBtn.classList.toggle("loading", isLoading);
       els.modalAudioIcon.innerHTML = isLoading ? LOADING_ICON_SM : isPlaying ? PAUSE_ICON_SM : PLAY_ICON_SM;
       els.modalAudioLabel.textContent = isLoading ? "Buscando…" : isPlaying ? "Pausar" : "Escuchar grabación propia";
+    }
+
+    if (els.modalVinylPlayBtn) {
+      const albumId = Number(els.modalVinylPlayBtn.dataset.albumId);
+      const isSeq = Boolean(sequentialSession) && sequentialAlbum && sequentialAlbum.id === albumId;
+      const isLoading = isSeq && loadingKey === `${albumId}#${sequentialIndex}`;
+      els.modalVinylPlayBtn.classList.toggle("playing", isSeq && !isLoading);
+      els.modalVinylPlayBtn.classList.toggle("loading", isLoading);
+      els.modalVinylPlayBtn.innerHTML = isLoading
+        ? `<svg class="spin-icon" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 4V1L8 5l4 4V6a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8Z"/></svg>`
+        : isSeq
+        ? `<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7 5h4v14H7Zm6 0h4v14h-4Z"/></svg>`
+        : `<svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M8 5v14l11-7Z"/></svg>`;
+      els.modalVinylPlayBtn.title = isSeq ? "Pausar" : "Escuchar el álbum de corrido";
+      els.modalVinylPlayBtn.setAttribute("aria-label", isSeq ? "Pausar" : "Escuchar el álbum de corrido");
     }
 
     document.querySelectorAll(".track-play-btn").forEach((btn) => {
@@ -686,6 +798,10 @@
     els.modalCloseBtn.focus();
 
     els.modalDownloadBtn.onclick = () => downloadCoverImage(album.cover, album.title);
+
+    els.modalVinylPlayBtn.dataset.albumId = album.id;
+    els.modalVinylPlayBtn.onclick = () => toggleSequentialPlay(album);
+    syncPlayUI();
   }
 
   function closeModal() {
