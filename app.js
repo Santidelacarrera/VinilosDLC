@@ -109,6 +109,8 @@
 
     fDesc: document.getElementById("f-desc"),
     fTracks: document.getElementById("f-tracks"),
+    trackAudioSection: document.getElementById("track-audio-section"),
+    trackAudioList: document.getElementById("track-audio-list"),
     submitBtn: document.getElementById("submit-btn"),
     cancelEditBtn: document.getElementById("cancel-edit-btn"),
 
@@ -458,17 +460,26 @@
     const track = album.tracklist[index];
     if (!track) return;
     const key = `${album.id}#${index}`;
-    requestPlayback(key, () => findSongPreview(album.artist, track));
+    const customUrl = album.track_audio && album.track_audio[String(index)];
+    if (customUrl) {
+      // El usuario ya subió esta canción completa: se reproduce entera,
+      // sin el tope de 1 minuto de las vistas previas buscadas.
+      requestPlayback(key, customUrl, true);
+    } else {
+      requestPlayback(key, () => findSongPreview(album.artist, track));
+    }
   }
 
   function playCustomRecording(album) {
     if (!album.audio_url) return;
-    requestPlayback(`custom-${album.id}`, album.audio_url);
+    requestPlayback(`custom-${album.id}`, album.audio_url, true);
   }
 
   // source puede ser una URL directa (string) o una función async que
-  // resuelve la URL (búsqueda en iTunes).
-  function requestPlayback(key, source) {
+  // resuelve la URL (búsqueda en iTunes). noCap=true evita el corte a
+  // los 60 segundos (se usa para audio propio subido a mano, ya sea de
+  // todo el álbum o de una canción puntual).
+  function requestPlayback(key, source, noCap) {
     sequentialSession = 0; // un click individual cancela el modo "de corrido"
     if (currentKey === key) {
       stopPreview();
@@ -489,15 +500,15 @@
       /* algunos navegadores tiran error sincrónico sin src: lo ignoramos */
     }
 
-    startPlayback(key, source, primedAudio);
+    startPlayback(key, source, primedAudio, noCap);
   }
 
-  async function startPlayback(key, source, primedAudio) {
+  async function startPlayback(key, source, primedAudio, noCap) {
     stopPreviewKeepSequential();
     const audio = primedAudio || new Audio();
 
     if (typeof source === "string") {
-      playUrl(audio, source, key);
+      playUrl(audio, source, key, noCap);
       return;
     }
 
@@ -520,7 +531,7 @@
         syncPlayUI();
         return;
       }
-      playUrl(audio, url, key);
+      playUrl(audio, url, key, noCap);
     } catch (err) {
       loadingKey = null;
       if (sequentialSession) {
@@ -532,7 +543,7 @@
     }
   }
 
-  function playUrl(audio, url, key) {
+  function playUrl(audio, url, key, noCap) {
     audio.src = url;
     currentAudio = audio;
     currentKey = key;
@@ -548,12 +559,14 @@
       stopPreview();
     });
 
-    previewTimer = setTimeout(() => {
-      if (currentKey === key) {
-        if (sequentialSession) advanceSequential();
-        else stopPreview();
-      }
-    }, PREVIEW_MAX_MS);
+    if (!noCap) {
+      previewTimer = setTimeout(() => {
+        if (currentKey === key) {
+          if (sequentialSession) advanceSequential();
+          else stopPreview();
+        }
+      }, PREVIEW_MAX_MS);
+    }
 
     audio.addEventListener("ended", () => {
       if (currentKey === key) {
@@ -604,6 +617,14 @@
     const album = sequentialAlbum;
     const track = tracks[sequentialIndex];
     const key = `${album.id}#${sequentialIndex}`;
+    const customUrl = album.track_audio && album.track_audio[String(sequentialIndex)];
+
+    if (customUrl) {
+      // Esta canción puntual ya tiene un archivo completo subido a mano:
+      // se reproduce entera (sin tope de 1 minuto) y listo, sin buscar.
+      playUrl(new Audio(), customUrl, key, true);
+      return;
+    }
 
     loadingKey = key;
     currentKey = null;
@@ -763,6 +784,7 @@
     els.modalDesc.textContent = album.description || "Este disco todavía no tiene una descripción cargada.";
 
     const tracks = Array.isArray(album.tracklist) ? album.tracklist.filter(Boolean) : [];
+    const trackAudio = album.track_audio || {};
     els.modalTrackCount.textContent = `${tracks.length} pista${tracks.length === 1 ? "" : "s"}`;
     els.modalTracklist.innerHTML = tracks.length
       ? tracks
@@ -772,6 +794,7 @@
           <button type="button" class="track-play-btn" data-key="${album.id}#${i}" title="Escuchar" aria-label="Escuchar ${escapeAttr(t)}">${PLAY_ICON}</button>
           <span class="track-num">${String(i + 1).padStart(2, "0")}</span>
           <span class="track-title">${escapeHtml(t)}</span>
+          ${trackAudio[String(i)] ? '<span class="track-full-tag" title="Canción completa subida">completa</span>' : ""}
         </li>`
           )
           .join("")
@@ -884,6 +907,8 @@
     els.cancelEditBtn.hidden = true;
     clearCoverUpload();
     clearAudioUpload();
+    els.trackAudioSection.hidden = true;
+    els.trackAudioList.innerHTML = "";
   }
 
   function clearCoverUpload() {
@@ -1183,8 +1208,113 @@
       <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z"/></svg>
       Actualizar disco`;
     els.cancelEditBtn.hidden = false;
+    renderTrackAudioSection(album);
     els.fTitle.scrollIntoView({ behavior: "smooth", block: "start" });
     els.fTitle.focus();
+  }
+
+  /* -------------------------------------------------------
+     9c. AUDIO COMPLETO POR CANCIÓN (subida manual por tema)
+     ------------------------------------------------------- */
+  function renderTrackAudioSection(album) {
+    const tracks = Array.isArray(album.tracklist) ? album.tracklist.filter(Boolean) : [];
+    if (!tracks.length) {
+      els.trackAudioSection.hidden = true;
+      els.trackAudioList.innerHTML = "";
+      return;
+    }
+
+    els.trackAudioSection.hidden = false;
+    const trackAudio = album.track_audio || {};
+
+    els.trackAudioList.innerHTML = tracks
+      .map((t, i) => {
+        const hasAudio = Boolean(trackAudio[String(i)]);
+        return `
+        <div class="track-audio-row" data-index="${i}">
+          <span class="track-audio-num">${String(i + 1).padStart(2, "0")}</span>
+          <span class="track-audio-title">${escapeHtml(t)}</span>
+          <span class="track-audio-status ${hasAudio ? "has-audio" : ""}" data-role="status">
+            ${hasAudio ? "✓ Cargada" : "Sin audio"}
+          </span>
+          <label class="btn btn-ghost btn-file" data-role="upload-label">
+            Subir
+            <input type="file" accept="audio/*" hidden data-role="upload-input">
+          </label>
+          <button type="button" class="icon-btn danger" data-role="remove-btn" title="Quitar audio" ${hasAudio ? "" : "hidden"}>
+            <svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M6 7h12l-1 14H7ZM9 4h6l1 2H8Z"/></svg>
+          </button>
+        </div>`;
+      })
+      .join("");
+
+    els.trackAudioList.querySelectorAll(".track-audio-row").forEach((row) => {
+      const index = Number(row.dataset.index);
+      const input = row.querySelector('[data-role="upload-input"]');
+      const removeBtn = row.querySelector('[data-role="remove-btn"]');
+
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (!file.type.startsWith("audio/")) {
+          showToast("Elegí un archivo de audio válido.");
+          return;
+        }
+        await saveTrackAudio(album.id, index, file, row);
+      });
+
+      removeBtn.addEventListener("click", async () => {
+        await removeTrackAudio(album.id, index, row);
+      });
+    });
+  }
+
+  async function saveTrackAudio(albumId, index, file, row) {
+    const label = row.querySelector('[data-role="upload-label"]');
+    const status = row.querySelector('[data-role="status"]');
+    const originalLabel = label.textContent;
+    label.textContent = "Subiendo…";
+    try {
+      const url = await uploadToBucket(file, AUDIO_BUCKET, `track-${albumId}-${index}`);
+      const album = albums.find((a) => a.id === albumId);
+      const updatedTrackAudio = { ...(album && album.track_audio ? album.track_audio : {}) };
+      updatedTrackAudio[String(index)] = url;
+
+      const { error } = await sb.from("albums").update({ track_audio: updatedTrackAudio }).eq("id", albumId);
+      if (error) throw error;
+
+      await fetchAlbums();
+      const refreshed = albums.find((a) => a.id === albumId);
+      if (refreshed) renderTrackAudioSection(refreshed);
+      renderAdminTable();
+      renderCatalog();
+      showToast("Canción cargada completa.");
+    } catch (err) {
+      console.error(err);
+      showToast("No se pudo subir el audio de esta canción.");
+      label.textContent = originalLabel;
+    }
+  }
+
+  async function removeTrackAudio(albumId, index, row) {
+    try {
+      const album = albums.find((a) => a.id === albumId);
+      const updatedTrackAudio = { ...(album && album.track_audio ? album.track_audio : {}) };
+      delete updatedTrackAudio[String(index)];
+
+      const { error } = await sb.from("albums").update({ track_audio: updatedTrackAudio }).eq("id", albumId);
+      if (error) throw error;
+
+      await fetchAlbums();
+      const refreshed = albums.find((a) => a.id === albumId);
+      if (refreshed) renderTrackAudioSection(refreshed);
+      renderAdminTable();
+      renderCatalog();
+      showToast("Audio quitado.");
+    } catch (err) {
+      console.error(err);
+      showToast("No se pudo quitar el audio.");
+    }
   }
 
   async function deleteAlbum(id) {
