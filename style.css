@@ -449,6 +449,27 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .audio-preview span{ color: var(--cream-dim); }
 #f-audio-preview-player{ width: 100%; margin-top: 10px; height: 32px; }
 
+.track-audio-list{ display: flex; flex-direction: column; gap: 8px; }
+.track-audio-row{
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 8px 10px;
+}
+.track-audio-num{
+  font-family: var(--font-mono); font-size: 11px; color: var(--gold); width: 20px; flex: none;
+}
+.track-audio-title{
+  flex: 1; font-size: 12.5px; color: var(--cream);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.track-audio-status{
+  font-size: 11px; color: var(--muted); flex: none;
+  display: flex; align-items: center; gap: 4px;
+}
+.track-audio-status.has-audio{ color: #7fd88f; }
+.track-audio-row .btn-file{ padding: 6px 10px; font-size: 11.5px; flex: none; }
+.track-audio-row .icon-btn{ flex: none; width: 26px; height: 26px; }
+
 .spin-icon{ animation: spin .9s linear infinite; }
 
 .form-actions{ display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
@@ -637,6 +658,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   width: 20px; flex: none; text-align: right;
 }
 .track-title{ flex: 1; }
+.track-full-tag{
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .4px;
+  color: #7fd88f; border: 1px solid rgba(127,216,143,.4);
+  border-radius: 999px; padding: 2px 8px; flex: none; text-transform: uppercase;
+}
 
 .track-play-btn{
   width: 28px; height: 28px; flex: none; border-radius: 50%;
