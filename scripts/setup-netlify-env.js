@@ -33,8 +33,12 @@ const variables = {
   MUSICBRAINZ_CONTACT: SITE_URL,
 };
 
+const secretNames = new Set(["SUPABASE_SERVICE_ROLE_KEY", "ADMIN_PASSWORD_HASH", "SESSION_SECRET"]);
+
 for (const [name, value] of Object.entries(variables)) {
-  run(["netlify", "env:set", name, JSON.stringify(value), "--secret", "--site", SITE_ID]);
+  const args = ["netlify", "env:set", name, JSON.stringify(value), "--context", "production", "--scope", "functions", "--site", SITE_ID];
+  if (secretNames.has(name)) args.push("--secret");
+  run(args);
   console.log(`${name}: configurada`);
 }
 console.log("Listo. Contraseña de admin en .env.admin-password (no la subas a git).");
