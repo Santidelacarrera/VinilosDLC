@@ -1,0 +1,24 @@
+{
+  "name": "vinilos-de-la-carrera",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catálogo personal de vinilos desplegado en Netlify con persistencia en Supabase.",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "node scripts/verify-build.js",
+    "check": "npm run lint && npm test && npm run build",
+    "lint": "eslint .",
+    "test": "node --test",
+    "security:audit": "npm audit --audit-level=high",
+    "secrets:generate": "node scripts/generate-secrets.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  },
+  "devDependencies": {
+    "eslint": "10.11.0",
+    "globals": "17.13.0"
+  }
+}
