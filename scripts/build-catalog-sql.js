@@ -7,7 +7,7 @@
 
 const { writeFileSync } = require("node:fs");
 const seen = new Set();
-const { coreRelease, confidence } = require("../netlify/functions/_lib/musicbrainz");
+const { coreRelease } = require("../netlify/functions/_lib/musicbrainz");
 
 const CONTACT = "https://vinilosdelacarreralantadilla.netlify.app";
 const ALBUMS = [
@@ -79,7 +79,7 @@ async function find([artist, title]) {
     if (!release || seen.has(release.musicbrainzId)) { missing.push(entry.join(" - ")); continue; }
     seen.add(release.musicbrainzId);
     console.log(`OK  ${release.artist} - ${release.title} (${release.year || "?"}, ${release.tracks.length} pistas, ${release.format || "?"})`);
-    const { sourceUrl, ...payload } = release;
+    const payload = { ...release }; delete payload.sourceUrl;
     const json = JSON.stringify(payload).replace(/\$/g, "\\u0024");
     parts.push(`do $import$ begin perform public.import_musicbrainz_release($j$${json}$j$::jsonb); exception when unique_violation then null; end $import$;`);
   }

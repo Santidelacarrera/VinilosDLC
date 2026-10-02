@@ -48,7 +48,10 @@ function cleanUrl(value, field, options = {}) {
 
 function validateCoverRights(input, hasCover = false) {
   const coverRights = input.cover_rights || "UNVERIFIED";
-  if (!["UNVERIFIED", "OWN_PHOTO", "LICENSED"].includes(coverRights)) badRequest("Procedencia de portada inválida.");
+  if (!["UNVERIFIED", "OWN_PHOTO", "LICENSED", "ARCHIVE_REFERENCE"].includes(coverRights)) badRequest("Procedencia de portada inválida.");
+  if (coverRights === "ARCHIVE_REFERENCE" && hasCover && !String(input.cover || "").startsWith("https://coverartarchive.org/")) {
+    badRequest("La referencia de archivo solo admite portadas de coverartarchive.org.");
+  }
   const coverRightsNote = cleanString(input.cover_rights_note, "Autorización de portada", 1000);
   if (hasCover && coverRights !== "UNVERIFIED" && coverRightsNote.length < 12) {
     badRequest("Indicá la procedencia o autorización de la portada.");

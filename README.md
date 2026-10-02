@@ -132,3 +132,7 @@ Varios discos son **ediciones parecidas** (no idénticas) a las físicas, porque
 - Varios están en edición CD/digital aunque el disco físico sea vinilo.
 
 Sin cargar: *Rock n Roll Discovered* (artista desconocido). Pendientes: portadas (requieren declarar procedencia) y audio (requiere derechos).
+
+### Portadas
+
+Las portadas **no se alojan** en este sitio. Los discos importados enlazan la imagen de [Cover Art Archive](https://coverartarchive.org) (proyecto de MusicBrainz/Internet Archive) con `cover_rights = 'ARCHIVE_REFERENCE'`: es una referencia para identificar la edición, no una licencia ni una declaración de propiedad. Solo se aceptan URLs de `coverartarchive.org` con ese valor. Las portadas propias (`OWN_PHOTO`) o con permiso (`LICENSED`) se suben desde el panel de admin. Discos sin portada disponible muestran un marcador.
