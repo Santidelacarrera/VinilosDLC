@@ -119,4 +119,16 @@ No existe licencia de distribución en el repositorio. El código, fotos y audio
 
 ## Carga inicial del catálogo (2026-10-02)
 
-54 discos y 681 canciones cargados en Supabase con `scripts/build-catalog-sql.js` (metadatos de MusicBrainz, sin audio ni portadas) más dos discos manuales (Madonna, Prince). Pendientes: portadas (requieren declarar procedencia), audio (requiere derechos) y los discos que MusicBrainz no tiene (Myriam Hernández, Simply Red, Bee Gees, Santana, Stevie Wonder ×2, Pearl Jam Orlando, Rock 'n' Roll Discovered): se cargan desde el panel de admin.
+61 discos y 827 canciones cargados en Supabase con `scripts/build-catalog-sql.js` (metadatos de MusicBrainz, sin audio ni portadas), más dos discos manuales (Madonna, Prince).
+
+Varios discos son **ediciones parecidas** (no idénticas) a las físicas, porque MusicBrainz no tiene la edición exacta; revisa y corrige desde el panel de admin:
+
+- Myriam Hernández: *Mis mejores canciones: 17 super éxitos*
+- Simply Red: *Greatest Hits* (1996)
+- Bee Gees: *The Greatest Hits*
+- Santana: *The Many Sides of Santana*
+- Stevie Wonder: *Original Musiquarium I* y *Greatest Hits*
+- Pearl Jam: concierto 2003-04-12, Orlando
+- Varios están en edición CD/digital aunque el disco físico sea vinilo.
+
+Sin cargar: *Rock n Roll Discovered* (artista desconocido). Pendientes: portadas (requieren declarar procedencia) y audio (requiere derechos).
