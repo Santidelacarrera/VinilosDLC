@@ -39,7 +39,7 @@ const variables = {
 
 writeFileSync(
   ".env.netlify",
-  Object.entries(variables).map(([name, value]) => `${name}="${value}"`).join("\n") + "\n",
+  Object.entries(variables).map(([name, value]) => `${name}='${value}'`).join("\n") + "\n",
   { mode: 0o600 }
 );
 console.log("Listo: .env.netlify (importar en Netlify) y .env.admin-password (tu contraseña).");

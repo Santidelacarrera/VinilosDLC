@@ -8,6 +8,9 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # SITE_URL y MUSICBRAINZ_CONTACT son URLs públicas que aparecen en la documentación.
+  # Ningún valor de secreto está en el repo (verificado); estas claves dan falsos positivos.
+  SECRETS_SCAN_OMIT_KEYS = "SITE_URL,MUSICBRAINZ_CONTACT"
 
 [[redirects]]
   from = "/api/*"
