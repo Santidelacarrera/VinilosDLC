@@ -1,21 +1,25 @@
 "use strict";
 
 // Uso: node scripts/setup-netlify-env.js
-// Requiere `netlify login` y `supabase login` hechos y la carpeta vinculada a ambos.
-// Carga las variables de las Functions en Netlify sin imprimir ningún secreto.
-// La contraseña de admin se guarda en .env.admin-password (ignorado por git).
+// Requiere `supabase login` hecho. Genera `.env.netlify` (ignorado por git) con las
+// variables de las Functions para importarlas en Netlify:
+//   Site configuration > Environment variables > Add a variable > Import from a .env file
+// No imprime ningún secreto. La contraseña de admin queda en `.env.admin-password`.
+// Borra ambos archivos cuando termines de importar y guardar la contraseña.
 
 const { execFileSync } = require("node:child_process");
 const { writeFileSync } = require("node:fs");
 
 const SUPABASE_REF = "ujswessaedegncxeoeio";
-const SITE_ID = "873f416f-7748-4fd1-9a06-f0e83d73c20b";
 const SITE_URL = "https://vinilosdelacarreralantadilla.netlify.app";
 
-const run = (args) =>
-  execFileSync("npx", args, { encoding: "utf8", shell: true, stdio: ["ignore", "pipe", "pipe"] });
-
-const keys = JSON.parse(run(["supabase", "projects", "api-keys", "--project-ref", SUPABASE_REF, "-o", "json"]));
+const keys = JSON.parse(
+  execFileSync("npx", ["supabase", "projects", "api-keys", "--project-ref", SUPABASE_REF, "-o", "json"], {
+    encoding: "utf8",
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+);
 const service = keys.find((key) => key.name === "service_role" || key.id === "service_role");
 if (!service?.api_key) throw new Error("No se encontró la clave service_role.");
 
@@ -33,12 +37,9 @@ const variables = {
   MUSICBRAINZ_CONTACT: SITE_URL,
 };
 
-const secretNames = new Set(["SUPABASE_SERVICE_ROLE_KEY", "ADMIN_PASSWORD_HASH", "SESSION_SECRET"]);
-
-for (const [name, value] of Object.entries(variables)) {
-  const args = ["netlify", "env:set", name, JSON.stringify(value), "--context", "production", "--scope", "functions", "--site", SITE_ID];
-  if (secretNames.has(name)) args.push("--secret");
-  run(args);
-  console.log(`${name}: configurada`);
-}
-console.log("Listo. Contraseña de admin en .env.admin-password (no la subas a git).");
+writeFileSync(
+  ".env.netlify",
+  Object.entries(variables).map(([name, value]) => `${name}="${value}"`).join("\n") + "\n",
+  { mode: 0o600 }
+);
+console.log("Listo: .env.netlify (importar en Netlify) y .env.admin-password (tu contraseña).");
