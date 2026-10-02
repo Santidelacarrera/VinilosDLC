@@ -81,8 +81,6 @@ npm run security:audit
 
 `check` ejecuta ESLint, tests de Node y verificación de build. No hay TypeScript, por lo que no existe un `typecheck` separado. Los tests locales no sustituyen una prueba end-to-end contra Supabase/Netlify reales. Para desplegar: aplicar migraciones tras backup, configurar variables, conectar Netlify, desplegar y probar login, importación, copias, portada, audio autorizado, retiro, logout y lectura pública. No se modificaron servicios remotos desde este trabajo.
 
-### Estado del proyecto Supabase `ujswessaedegncxeoeio` (verificado 2026-10-01)
-
 Migraciones 001, 002 y 003 **APLICADAS** y registradas en el historial remoto. Verificación de solo lectura posterior:
 
 | Elemento | Estado |
