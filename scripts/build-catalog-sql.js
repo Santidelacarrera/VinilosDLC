@@ -6,72 +6,31 @@
 // ni portadas. Aplicar con: npx supabase db query --linked -f <salida.sql>
 
 const { writeFileSync } = require("node:fs");
+const seen = new Set();
 const { coreRelease, confidence } = require("../netlify/functions/_lib/musicbrainz");
 
 const CONTACT = "https://vinilosdelacarreralantadilla.netlify.app";
 const ALBUMS = [
-  ["Sui Generis", "Adiós Sui Generis, Vol. 1"],
-  ["Sui Generis", "Adiós Sui Generis, Vol. 2"],
-  ["Alice in Chains", "Alice in Chains"],
-  ["Amy Winehouse", "Back to Black"],
-  ["Barry White", "20th Century Records: The Singles"],
-  ["Bob Dylan", "Bob Dylan's Greatest Hits, Volume III"],
-  ["Bob Dylan", "Bob Dylan's Greatest Hits"],
-  ["Phil Collins", "...But Seriously"],
-  ["Cat Stevens", "Teaser and the Firecat"],
-  ["Charly García", "Parte de la religión"],
-  ["Chris Cornell", "Euphoria Morning"],
-  ["Creedence Clearwater Revival", "Creedence Clearwater Revival"],
-  ["Pink Floyd", "The Dark Side of the Moon"],
-  ["David Bowie", "Live Rio 1990"],
-  ["Dire Straits", "Private Investigations: The Best of Dire Straits & Mark Knopfler"],
-  ["Duran Duran", "Notorious"],
-  ["Eric Clapton", "Journeyman"],
-  ["George Michael", "Faith"],
-  ["Fito Páez", "El amor después del amor"],
+  ["Sui Generis", "Adiós Sui Generis"],
+  ["Sui Generis", "Adiós Sui Generis"],
+  ["Barry White", "The Singles Collection"],
+  ["Bob Dylan", "Bob Dylan's Greatest Hits Vol. 3"],
+  ["David Bowie", "Live Rio"],
+  ["Dire Straits", "Private Investigations"],
   ["Myriam Hernández", "Grandes éxitos"],
-  ["Journey", "Greatest Hits"],
-  ["Journey", "Greatest Hits 2"],
-  ["Iron Maiden", "Iron Maiden"],
-  ["Iron Maiden", "The Number of the Beast"],
-  ["Los Bunkers", "MTV Unplugged"],
-  ["Los Prisioneros", "Corazones"],
   ["Lucybell", "Mil caminos"],
-  ["Madonna", "Like a Prayer"],
-  ["Metallica", "Metallica"],
-  ["Michael Jackson", "Thriller"],
-  ["Nirvana", "Nevermind"],
-  ["Rod Stewart", "Out of Order"],
-  ["Pet Shop Boys", "Nonetheless"],
-  ["Pixies", "Doolittle"],
-  ["Ramones", "Ramones"],
-  ["Prince", "Sign o' the Times"],
-  ["Gilberto Gil", "Gilberto Gil"],
   ["Pearl Jam", "Live at the Orlando Arena"],
-  ["Rock 'n' Roll Discovered", "Rock 'n' Roll Discovered"],
-  ["Joaquín Sabina", "Enemigos íntimos"],
-  ["Simon & Garfunkel", "Simon and Garfunkel's Greatest Hits"],
-  ["Simply Red", "All Star"],
-  ["Soda Stereo", "Nada personal"],
-  ["Soundgarden", "Superunknown"],
+  ["Simon & Garfunkel", "Greatest Hits"],
+  ["Simply Red", "Greatest Hits"],
   ["Stevie Wonder", "Live at Las Vegas"],
-  ["Stone Temple Pilots", "Live 2018"],
-  ["Soda Stereo", "Sueño Stereo"],
-  ["The Beatles", "Abbey Road"],
-  ["The Beatles", "The Beatles at the Hollywood Bowl"],
-  ["The Beatles", "Let It Be"],
-  ["The Beatles", "Rubber Soul"],
   ["Bee Gees", "Grandes canciones"],
-  ["R.E.M.", "In Time: The Best of R.E.M. 1988–2003"],
-  ["The Cure", "Greatest Hits"],
   ["Santana", "The Many Faces of Santana"],
   ["Stevie Wonder", "The Many Faces of Stevie Wonder"],
-  ["Genesis", "Turn It On Again: The Hits"],
-  ["U2", "Zooropa"],
-  ["Los Fabulosos Cadillacs", "Vasos vacíos"],
-  ["Depeche Mode", "Violator"],
-  ["Marvin Gaye", "What's Going On"],
-  ["ZZ Top", "Eliminator"],
+  ["Amy Winehouse", "Back to Black"],
+  ["Duran Duran", "Notorious"],
+  ["Madonna", "Like a Prayer"],
+  ["Prince", "Sign o' the Times"],
+  ["The Beatles", "Let It Be"],
 ];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -92,18 +51,19 @@ async function mb(path) {
 const clean = (value) => value.replace(/[\\+\-&|!(){}\[\]^"~*?:/]/g, " ").replace(/\s+/g, " ").trim();
 
 async function find([artist, title]) {
-  const found = await mb(`release?query=${encodeURIComponent(`release:"${clean(title)}" AND artist:"${clean(artist)}" AND status:official`)}&limit=25&fmt=json`);
-  const candidates = (found.releases || []).filter((item) => item.score >= 85);
+  const found = await mb(`release?query=${encodeURIComponent(`release:(${clean(title)}) AND artist:"${clean(artist)}" AND status:official`)}&limit=25&fmt=json`);
+  const candidates = (found.releases || []).filter((item) => item.score >= 70 && !seen.has(item.id));
   const rank = (item) => {
+    const count = (item.media || []).reduce((sum, medium) => sum + (medium["track-count"] || 0), 0);
     const format = (item.media || []).map((medium) => medium.format || "").join(" ");
-    return [/vinyl/i.test(format) ? 0 : 1, item.date || "9999"];
+    return [(count >= 6 ? 0 : 2) + (/vinyl/i.test(format) ? 0 : 1), item.date || "9999"];
   };
   candidates.sort((a, b) => { const x = rank(a), y = rank(b); return x[0] - y[0] || String(x[1]).localeCompare(String(y[1])); });
   for (const candidate of candidates.slice(0, 3)) {
     const full = await mb(`release/${candidate.id}?inc=artist-credits+labels+recordings+release-groups+isrcs&fmt=json`);
     try {
       const release = coreRelease(full);
-      if (release.tracks.length) return release;
+      if (release.tracks.length >= 6) return release;
     } catch { /* probar el siguiente candidato */ }
   }
   return null;
@@ -114,7 +74,6 @@ async function find([artist, title]) {
   if (!out) throw new Error("Indicá el archivo de salida.");
   const parts = ["-- Generado por scripts/build-catalog-sql.js (metadatos de MusicBrainz, sin audio ni portadas)"];
   const missing = [];
-  const seen = new Set();
   for (const entry of ALBUMS) {
     const release = await find(entry).catch((error) => { console.error(`${entry[0]} - ${entry[1]}: ${error.message}`); return null; });
     if (!release || seen.has(release.musicbrainzId)) { missing.push(entry.join(" - ")); continue; }
