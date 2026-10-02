@@ -81,21 +81,22 @@ npm run security:audit
 
 `check` ejecuta ESLint, tests de Node y verificación de build. No hay TypeScript, por lo que no existe un `typecheck` separado. Los tests locales no sustituyen una prueba end-to-end contra Supabase/Netlify reales. Para desplegar: aplicar migraciones tras backup, configurar variables, conectar Netlify, desplegar y probar login, importación, copias, portada, audio autorizado, retiro, logout y lectura pública. No se modificaron servicios remotos desde este trabajo.
 
-### Estado del proyecto Supabase `ujswessaedegncxeoeio` (preflight 2026-10-01, sólo lectura)
+### Estado del proyecto Supabase `ujswessaedegncxeoeio` (verificado 2026-10-01)
 
-El repositorio está vinculado al proyecto con `supabase link`. El proyecto remoto está **vacío**: sin tablas, policies, buckets, objetos ni historial de migraciones. Por eso las tres migraciones locales figuran como **FALTANTE** en remoto. No hay riesgo para datos existentes al aplicarlas.
+Migraciones 001, 002 y 003 **APLICADAS** y registradas en el historial remoto. Verificación de solo lectura posterior:
 
-| Elemento | Local | Remoto |
-|---|---|---|
-| Tablas (`albums`, `tracks`, `physical_copies`, `admin_sessions`, `admin_login_attempts`, `music_metadata_cache`, `external_api_throttle`) | definidas | FALTANTE |
-| RLS habilitada y forzada, sin policies | definida | FALTANTE |
-| Funciones RPC y triggers | definidos | FALTANTE |
-| Buckets `portadas` (público) y `canciones` (privado) | definidos | FALTANTE |
-| Policies de `storage.objects` | ninguna, por diseño: sólo `service_role` escribe | INEXISTENTE (correcto) |
-| Grants a `anon`/`authenticated` | revocados (001, 002, 003) | NO VERIFICABLE hasta aplicar |
-| Signed URLs de audio | emitidas por la Function | NO VERIFICADO (sin buckets) |
+| Elemento | Estado |
+|---|---|
+| 7 tablas (`albums`, `tracks`, `physical_copies`, `admin_sessions`, `admin_login_attempts`, `music_metadata_cache`, `external_api_throttle`) | APLICADO |
+| RLS habilitada y forzada en las 7 | APLICADO |
+| Policies en `public` y `storage` | 0, por diseño: solo `service_role` accede |
+| Grants de tablas a `anon`/`authenticated`/`PUBLIC` | 0 |
+| 6 funciones: ejecutables solo por `service_role` | APLICADO |
+| Triggers `albums_sync_manual_tracks`, `albums_initialize_copy` | APLICADO |
+| Buckets `portadas` (público) y `canciones` (privado), 4 MB | APLICADO |
+| Signed URLs de audio y pruebas end-to-end | NO VERIFICADO: requiere Functions desplegadas en Netlify |
 
-Aplicar, tras revisar, con `npx supabase db push --linked`. La migración `003` revoca privilegios por defecto para `anon`/`authenticated` y cierra el acceso RPC a las funciones de trigger. Después de aplicar, repetir las consultas de `AUDITORIA_PREPRODUCCION.md` y confirmar que no existen grants ni policies para `anon`.
+Pendiente fuera de la base: desplegar en Netlify con las variables de entorno y rotar la contraseña histórica expuesta.
 
 Si aparece un `429` al buscar música, esperar un segundo y reintentar. Si la búsqueda no funciona, comprobar `MUSICBRAINZ_CONTACT` y los logs de Functions. Si una ficha devuelve error, verificar las tres migraciones y credenciales Supabase. Un `409` indica edición existente, posible duplicado o conflicto de actualización. No reutilizar contraseñas que pudieran haber aparecido en versiones históricas del repositorio: rotarlas.
 
