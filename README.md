@@ -116,3 +116,7 @@ Pendiente: probar login admin y subidas con la contraseña de `.env.admin-passwo
 Si aparece un `429` al buscar música, esperar un segundo y reintentar. Si la búsqueda no funciona, comprobar `MUSICBRAINZ_CONTACT` y los logs de Functions. Si una ficha devuelve error, verificar las tres migraciones y credenciales Supabase. Un `409` indica edición existente, posible duplicado o conflicto de actualización. No reutilizar contraseñas que pudieran haber aparecido en versiones históricas del repositorio: rotarlas.
 
 No existe licencia de distribución en el repositorio. El código, fotos y audios no deben redistribuirse suponiendo una licencia implícita.
+
+## Carga inicial del catálogo (2026-10-02)
+
+54 discos y 681 canciones cargados en Supabase con `scripts/build-catalog-sql.js` (metadatos de MusicBrainz, sin audio ni portadas) más dos discos manuales (Madonna, Prince). Pendientes: portadas (requieren declarar procedencia), audio (requiere derechos) y los discos que MusicBrainz no tiene (Myriam Hernández, Simply Red, Bee Gees, Santana, Stevie Wonder ×2, Pearl Jam Orlando, Rock 'n' Roll Discovered): se cargan desde el panel de admin.
