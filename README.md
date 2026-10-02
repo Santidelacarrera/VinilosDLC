@@ -96,7 +96,22 @@ Migraciones 001, 002 y 003 **APLICADAS** y registradas en el historial remoto. V
 | Buckets `portadas` (público) y `canciones` (privado), 4 MB | APLICADO |
 | Signed URLs de audio y pruebas end-to-end | NO VERIFICADO: requiere Functions desplegadas en Netlify |
 
-Pendiente fuera de la base: desplegar en Netlify con las variables de entorno y rotar la contraseña histórica expuesta.
+### Estado del despliegue (verificado 2026-10-02)
+
+Sitio: https://vinilosdelacarreralantadilla.netlify.app (Netlify, rama `main`, deploy automático).
+
+| Comprobación | Resultado |
+|---|---|
+| `/`, páginas legales | 200 |
+| `/files.zip`, `/identify-album.js`, `/.env`, rutas inventadas | 404 |
+| Cabeceras CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy | presentes |
+| `GET /api/albums` (lectura pública desde Supabase) | 200 |
+| `POST /api/login` con contraseña incorrecta | 401 |
+| Login admin válido, subida de portada/audio, signed URLs | NO VERIFICADO |
+
+Las variables de las Functions se cargan en el panel de Netlify (`npm run secrets:generate` y `scripts/setup-netlify-env.js` generan los valores; los archivos resultantes están ignorados por git y deben borrarse tras importar). Si el escáner de secretos de Netlify falla, las claves de URL pública están excluidas en `netlify.toml`.
+
+Pendiente: probar login admin y subidas con la contraseña de `.env.admin-password`, y rotar cualquier credencial que estuviera en el frontend histórico.
 
 Si aparece un `429` al buscar música, esperar un segundo y reintentar. Si la búsqueda no funciona, comprobar `MUSICBRAINZ_CONTACT` y los logs de Functions. Si una ficha devuelve error, verificar las tres migraciones y credenciales Supabase. Un `409` indica edición existente, posible duplicado o conflicto de actualización. No reutilizar contraseñas que pudieran haber aparecido en versiones históricas del repositorio: rotarlas.
 
