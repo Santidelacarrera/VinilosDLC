@@ -19,6 +19,15 @@ function validateSupabaseProjectUrl(value) {
   return url.href;
 }
 
+// Netlify corta las Functions síncronas a los 10 s; se aborta antes para responder 503 limpio.
+const REQUEST_TIMEOUT_MS = 8000;
+
+function fetchWithTimeout(input, init = {}) {
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+  return fetch(input, { ...init, signal });
+}
+
 function getSupabase() {
   const url = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,7 +38,7 @@ function getSupabase() {
   if (!client) {
     client = createClient(verifiedUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
-      global: { headers: { "X-Client-Info": "vinilos-netlify-functions" } },
+      global: { fetch: fetchWithTimeout, headers: { "X-Client-Info": "vinilos-netlify-functions" } },
     });
   }
   return client;

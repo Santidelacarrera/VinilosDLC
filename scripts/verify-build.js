@@ -10,9 +10,13 @@ const requiredFiles = [
   "public/index.html",
   "public/style.css",
   "public/app.js",
+  "public/404.html",
+  "public/favicon.svg",
+  "public/robots.txt",
   "netlify.toml",
   "netlify/functions/api.js",
   "netlify/functions/music.js",
+  "netlify/functions/keepalive.js",
   "supabase/migrations/202610010001_secure_albums.sql",
   "supabase/migrations/202610010002_music_archive.sql",
   "public/politica-de-privacidad/index.html",
@@ -27,6 +31,7 @@ for (const relative of requiredFiles) {
 new vm.Script(fs.readFileSync(path.join(root, "public/app.js"), "utf8"), { filename: "app.js" });
 require(path.join(root, "netlify/functions/api.js"));
 require(path.join(root, "netlify/functions/music.js"));
+require(path.join(root, "netlify/functions/keepalive.js"));
 
 const html = fs.readFileSync(path.join(root, "public/index.html"), "utf8");
 for (const asset of ["style.css", "app.js"]) assert.match(html, new RegExp(`["']${asset}["']`));

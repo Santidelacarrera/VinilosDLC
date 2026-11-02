@@ -4,6 +4,8 @@
 
   const $ = (id) => document.getElementById(id);
   const state = { albums: [], authenticated: false, selectedId: null, editingId: null, editingVersion: null, release: null, queue: [], history: [], current: null };
+  let lastActiveElement = null;
+  let loginTriggerElement = null;
   const audio = $("audio-element");
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
   const text = (id, value) => { $(id).textContent = value; };
@@ -33,8 +35,10 @@
       state.albums = Array.isArray(result.albums) ? result.albums : [];
       text("sync-status", state.albums.length ? "" : "La colección todavía no tiene ediciones registradas.");
       renderAll();
-    } catch {
-      text("sync-status", "No pudimos cargar la colección. Revisá la conexión y usá «Actualizar archivo» para reintentar.");
+    } catch (error) {
+      text("sync-status", error.status === 503
+        ? "El archivo está temporalmente fuera de servicio. Reintentá en unos minutos con «Actualizar archivo»."
+        : "No pudimos cargar la colección. Revisá la conexión y usá «Actualizar archivo» para reintentar.");
     }
   }
 
@@ -54,7 +58,7 @@
     const cardElement = document.createElement("article");
     cardElement.className = `record-card ${index === 0 ? "lead-record" : ""}`;
     cardElement.innerHTML = `<button type="button" class="record-open" aria-label="Abrir ficha de ${escape(album.title)} de ${escape(album.artist)}">${coverMarkup(album)}<span class="record-meta"><span class="record-index">${String(index + 1).padStart(2, "0")} / ARCHIVO</span><strong>${escape(album.title)}</strong><span>${escape(album.artist)}</span><small>${album.year || "Año no documentado"}${album.format ? ` · ${escape(album.format)}` : ""}</small></span></button>`;
-    cardElement.querySelector("button").addEventListener("click", () => openAlbum(album.id));
+    cardElement.querySelector("button").addEventListener("click", (event) => openAlbum(album.id, event.currentTarget));
     const image = cardElement.querySelector("img");
     image?.addEventListener("error", () => image.replaceWith(placeholder(album.title)), { once: true });
     return cardElement;
@@ -147,7 +151,12 @@
   }
 
   function showView(view) {
-    if (view === "admin" && !state.authenticated) { $("login-dialog").showModal(); return; }
+    if (view === "admin" && !state.authenticated) {
+      loginTriggerElement = $("show-admin");
+      $("login-dialog").showModal();
+      $("login-password").focus();
+      return;
+    }
     for (const name of ["collection", "artists", "admin"]) {
       $(`${name}-view`).hidden = name !== view;
       const button = $(`show-${name}`);
@@ -232,12 +241,14 @@
     form.elements.media.focus();
   }
 
-  function openAlbum(id) {
+  function openAlbum(id, trigger = null) {
     const album = state.albums.find((item) => item.id === id);
     if (!album) return;
+    lastActiveElement = trigger || document.activeElement;
     state.selectedId = id;
     renderAlbum(album);
     $("album-dialog").showModal();
+    $("dialog-close").focus();
   }
 
   function audioUploadForm(album, track, row) {
@@ -485,7 +496,18 @@
   for (const id of ["search-input", "artist-filter", "decade-filter"]) $(id).addEventListener(id === "search-input" ? "input" : "change", renderCatalog);
   $("refresh-btn").addEventListener("click", loadAlbums);
   $("dialog-close").addEventListener("click", () => $("album-dialog").close());
+  $("album-dialog").addEventListener("close", () => {
+    state.selectedId = null;
+    if (lastActiveElement && typeof lastActiveElement.focus === "function") {
+      lastActiveElement.focus();
+    }
+  });
   $("login-close").addEventListener("click", () => $("login-dialog").close());
+  $("login-dialog").addEventListener("close", () => {
+    if (loginTriggerElement && typeof loginTriggerElement.focus === "function") {
+      loginTriggerElement.focus();
+    }
+  });
   $("login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = $("login-form").querySelector("button"); button.disabled = true;

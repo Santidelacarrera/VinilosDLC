@@ -6,6 +6,10 @@
 [functions]
   node_bundler = "esbuild"
 
+# Evita que Supabase (plan gratuito) pause el proyecto por inactividad.
+[functions.keepalive]
+  schedule = "@daily"
+
 [build.environment]
   NODE_VERSION = "22"
   # SITE_URL, MUSICBRAINZ_CONTACT y SUPABASE_URL son URLs públicas que aparecen en la documentación.
@@ -37,3 +41,8 @@
   for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/favicon.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"

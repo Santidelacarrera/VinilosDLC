@@ -53,6 +53,7 @@ No hay `GEMINI_API_KEY`, claves públicas de Supabase ni proveedor de streaming.
 | Ruta | Acceso | Uso |
 |---|---|---|
 | `GET /api/albums` | público | Catálogo saneado, pistas y copias sin notas privadas |
+| `GET /api/health` | público | Comprobación de disponibilidad del servicio |
 | `POST /api/login`, `GET /api/session`, `POST /api/logout` | sesión | Inicio, comprobación y revocación |
 | `POST /api/albums`, `PUT /api/albums/:id`, `DELETE /api/albums/:id` | administrador | CRUD de edición; edición con control optimista `expectedUpdatedAt` |
 | `POST /api/albums/:id/copies`, `PUT /api/copies/:id` | administrador | Registro de ejemplares físicos |

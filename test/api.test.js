@@ -3,10 +3,21 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const { canPlayTrack, handler, parseStoredObject, publicAlbum, routeParts } = require("../netlify/functions/api");
+const { isUpstreamUnavailable } = require("../netlify/functions/_lib/http");
 
 test("resuelve rutas reescritas y rutas directas de Functions", () => {
   assert.deepEqual(routeParts({ path: "/api/tracks/7/playback" }), ["tracks", "7", "playback"]);
   assert.deepEqual(routeParts({ path: "/.netlify/functions/api/albums" }), ["albums"]);
+  assert.deepEqual(routeParts({ path: "/api/health" }), ["health"]);
+});
+
+test("identifica errores de indisponibilidad de proveedor para responder 503", () => {
+  assert.equal(isUpstreamUnavailable(new Error("fetch failed")), true);
+  assert.equal(isUpstreamUnavailable(new Error("getaddrinfo ENOTFOUND ujswessaedegncxeoeio.supabase.co")), true);
+  assert.equal(isUpstreamUnavailable(new Error("connect ECONNREFUSED 127.0.0.1")), true);
+  assert.equal(isUpstreamUnavailable({ name: "TimeoutError" }), true);
+  assert.equal(isUpstreamUnavailable(new Error("ValidationError: invalid email")), false);
+  assert.equal(isUpstreamUnavailable(null), false);
 });
 
 test("sólo reconoce objetos del Storage configurado", () => {

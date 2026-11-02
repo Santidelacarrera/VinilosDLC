@@ -1,7 +1,7 @@
 "use strict";
 
 const { randomUUID } = require("node:crypto");
-const { json, methodNotAllowed, parseJson } = require("./_lib/http");
+const { isUpstreamUnavailable, json, methodNotAllowed, parseJson, serviceUnavailable } = require("./_lib/http");
 const { createStoredSession, hasStoredSession, revokeStoredSession } = require("./_lib/auth");
 const { clearLoginAttempts, consumeLoginAttempt } = require("./_lib/login-rate");
 const {
@@ -334,11 +334,22 @@ async function login(event) {
   return json(200, { authenticated: true }, { "Set-Cookie": sessionCookie(token) });
 }
 
+/** Comprobación ligera para monitores externos: no expone detalles internos. */
+async function health() {
+  const { error } = await getSupabase().from("albums").select("id", { head: true, count: "estimated" }).limit(1);
+  if (error) throw error;
+  return json(200, { status: "ok" });
+}
+
 async function handler(event) {
   try {
     const [resource, idValue, action] = routeParts(event);
     const method = event.httpMethod;
 
+    if (resource === "health") {
+      if (method !== "GET") return methodNotAllowed(["GET"]);
+      return await health();
+    }
     if (resource === "login") return await login(event);
     if (resource === "logout") {
       if (method !== "POST") return methodNotAllowed(["POST"]);
@@ -386,6 +397,10 @@ async function handler(event) {
     return methodNotAllowed(["PUT", "DELETE"]);
   } catch (error) {
     const statusCode = Number(error.statusCode) || 500;
+    if (statusCode >= 500 && isUpstreamUnavailable(error)) {
+      console.error("Base de datos no disponible", { name: error.name, message: error.message });
+      return serviceUnavailable();
+    }
     if (statusCode >= 500) console.error("Error de API", { name: error.name, message: error.message });
     return json(statusCode, {
       error: statusCode >= 500 ? "Error interno del servidor." : error.message,
