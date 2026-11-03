@@ -13,6 +13,7 @@ const requiredFiles = [
   "public/404.html",
   "public/favicon.svg",
   "public/robots.txt",
+  "public/sitemap.xml",
   "netlify.toml",
   "netlify/functions/api.js",
   "netlify/functions/music.js",

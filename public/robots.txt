@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /.netlify/
+
+Sitemap: https://vinilosdelacarreralantadilla.netlify.app/sitemap.xml
