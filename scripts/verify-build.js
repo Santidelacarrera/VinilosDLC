@@ -14,6 +14,7 @@ const requiredFiles = [
   "public/favicon.svg",
   "public/robots.txt",
   "public/sitemap.xml",
+  "public/google402eb5184db8601b.html",
   "netlify.toml",
   "netlify/functions/api.js",
   "netlify/functions/music.js",
