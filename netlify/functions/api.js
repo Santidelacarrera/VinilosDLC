@@ -25,8 +25,10 @@ function safeHttpsUrl(value) {
 }
 
 function publicAlbum(row, admin = false) {
+  const isArchive = String(row?.cover || "").startsWith("https://coverartarchive.org/");
+  const isStorage = storageHost() && String(row?.cover || "").startsWith(`https://${storageHost()}/`);
   const coverVerified = ["OWN_PHOTO", "LICENSED"].includes(row?.cover_rights) ||
-    (row?.cover_rights === "ARCHIVE_REFERENCE" && String(row?.cover || "").startsWith("https://coverartarchive.org/"));
+    (row?.cover_rights === "ARCHIVE_REFERENCE" && (isArchive || isStorage));
   return {
     id: Number.isSafeInteger(Number(row?.id)) ? Number(row.id) : 0,
     title: String(row?.title || "").slice(0, 200),
