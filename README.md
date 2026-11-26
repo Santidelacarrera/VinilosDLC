@@ -2,8 +2,6 @@
 
 Archivo digital de una **colección personal de vinilos**, no una tienda. Permite consultar ediciones y copias físicas, importar datos verificables de MusicBrainz y reproducir únicamente archivos para los que el propietario haya registrado una autorización de difusión. No incluye compras, precios de venta, reseñas ficticias ni estadísticas inventadas.
 
-> **PREPRODUCCIÓN NO APROBADA.** Este README describe el código local, **no** la versión que sirve actualmente `vinilosdelacarrera.netlify.app`. Esa versión anterior expone archivos heredados y no debe considerarse apta para producción. El único proyecto Supabase autorizado ahora es `ujswessaedegncxeoeio`; su esquema, RLS y Storage aún no se han podido inspeccionar. No aplicar migraciones ni desplegar hasta completar el preflight descrito en [AUDITORIA_PREPRODUCCION.md](AUDITORIA_PREPRODUCCION.md).
-
 ## Arquitectura y stack
 
 | Capa | Implementación |
